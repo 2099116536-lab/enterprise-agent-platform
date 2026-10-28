@@ -51,7 +51,7 @@
 ## 快速开始
 
 ```bash
-git clone https://github.com/<your-id>/enterprise-agent-platform.git
+git clone https://github.com/2099116536-lab/enterprise-agent-platform.git
 cd enterprise-agent-platform
 pip install -r requirements.txt
 
