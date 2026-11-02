@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from loguru import logger
+from .log import logger
 
 # 低于该相似度视为"知识库里没有"，直接拒答而不是硬编
 REJECT_THRESHOLD = 0.15

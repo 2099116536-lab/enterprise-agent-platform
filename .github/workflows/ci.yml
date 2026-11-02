@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # 只装最小依赖：验证"没有向量库/没有 langgraph 也能跑通"这条降级路径
+      - name: 安装最小依赖
+        run: pip install -r requirements.txt
+
+      - name: 单元测试
+        run: python -m unittest discover -s tests -v
+
+      - name: 评测（离线 Mock，60 条标注集）
+        run: python main.py eval --mock
+
+      - name: 校验指标不低于基线
+        run: |
+          python - <<'PY'
+          import json, re, subprocess
+          out = subprocess.run(["python", "main.py", "eval", "--mock"],
+                               capture_output=True, text=True).stdout
+          m = re.search(r"\{'total'.*?\}", out)
+          assert m, out
+          d = eval(m.group(0))  # noqa: S307 - 输出是本地脚本产生的字典字面量
+          assert d["source_hit_rate"] >= 0.733, d
+          assert d["keyword_coverage"] >= 0.717, d
+          assert d["reject_rate"] <= 0.05, d
+          assert d["intent_accuracy"] >= 0.883, d
+          print("OK", d)
+          PY
+
+      - name: 缓存与上下文基准
+        run: python -m src.bench

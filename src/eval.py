@@ -13,7 +13,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from loguru import logger
+from .log import logger
 
 from .graph import AgentPlatform, Intent
 

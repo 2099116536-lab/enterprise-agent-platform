@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 from typing import Any, Callable
 
-from loguru import logger
+from .log import logger
 
 # --------------------------------------------------------------------------- #
 # 本地工具注册表（无 MCP Server 时的等价实现）

@@ -11,7 +11,7 @@ import argparse
 import json
 import sys
 
-from loguru import logger
+from src.log import logger
 
 from src.eval import load_cases, run_eval
 from src.graph import AgentPlatform

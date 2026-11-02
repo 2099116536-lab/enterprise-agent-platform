@@ -11,13 +11,17 @@
 from __future__ import annotations
 
 import time
+import uuid
 from enum import Enum
 from typing import Any
 
-from loguru import logger
+from .log import logger
 from pydantic import BaseModel, Field
 
+from .cache import SemanticCache
+from .context import ContextBudget
 from .rag import HybridRetriever, Retrieved
+from .trace import RECORDER, TraceRecorder
 
 # --------------------------------------------------------------------------- #
 # 意图
@@ -76,6 +80,10 @@ class AgentState(BaseModel):
     rejected: bool = False
     trace: list[str] = Field(default_factory=list)
     started_at: float = Field(default_factory=time.perf_counter)
+    # 可观测与成本：这三个字段是为了让"线上为什么慢/为什么答这句"可查
+    trace_id: str = Field(default_factory=lambda: uuid.uuid4().hex[:12])
+    cache_hit: str = "miss"          # exact / semantic / miss
+    context_saved_pct: float = 0.0   # 上下文压缩省下的比例
 
 
 # --------------------------------------------------------------------------- #
@@ -96,25 +104,34 @@ REPORT_SYSTEM = """你是企业报告撰写助手。基于检索到的资料生�
 class AgentPlatform:
     """把四个子 Agent 组装成可执行的 LangGraph 应用。"""
 
-    def __init__(self, retriever: HybridRetriever | None = None, llm=None, memory=None) -> None:
+    def __init__(self, retriever: HybridRetriever | None = None, llm=None, memory=None,
+                 cache: SemanticCache | None = None, recorder: TraceRecorder | None = None,
+                 budget: ContextBudget | None = None) -> None:
         self.retriever = retriever
         self.llm = llm
         self.memory = memory  # 可选：RedisMemory / InMemoryMemory
+        self.cache = cache if cache is not None else SemanticCache()
+        self.recorder = recorder or RECORDER
+        self.budget = budget or ContextBudget()
         self.app = self._build()
 
     # ---------------- 节点 ---------------- #
     def node_route(self, state: AgentState) -> AgentState:
-        state.intent = classify_intent(state.query, self.llm)
-        state.trace.append(f"route: intent={state.intent.value}")
+        with self.recorder.span(state.trace_id, "route", state.query) as sp:
+            state.intent = classify_intent(state.query, self.llm)
+            state.trace.append(f"route: intent={state.intent.value}")
+            sp["detail"] = state.intent.value
         return state
 
     def node_load_history(self, state: AgentState) -> AgentState:
-        if self.memory is not None:
-            try:
-                state.history = self.memory.load(state.session_id)
-                state.trace.append(f"memory: 载入 {len(state.history)} 轮历史")
-            except Exception as exc:
-                logger.warning("记忆载入失败：{}", exc)
+        with self.recorder.span(state.trace_id, "load_history", state.query) as sp:
+            if self.memory is not None:
+                try:
+                    state.history = self.memory.load(state.session_id)
+                    state.trace.append(f"memory: 载入 {len(state.history)} 轮历史")
+                except Exception as exc:
+                    logger.warning("记忆载入失败：{}", exc)
+            sp["detail"] = f"{len(state.history)} 条历史"
         return state
 
     def node_chat(self, state: AgentState) -> AgentState:
@@ -123,38 +140,67 @@ class AgentPlatform:
         return state
 
     def node_retrieval(self, state: AgentState) -> AgentState:
-        if self.retriever is None:
-            state.answer = "知识库未初始化。"
+        with self.recorder.span(state.trace_id, "retrieval", state.query) as sp:
+            # 1) 先查缓存（精确 + 语义），命中就不查库、不调模型
+            hit, kind, sim = self.cache.get(state.query)
+            state.cache_hit = kind
+            if hit is not None:
+                state.answer = hit.answer
+                state.citations = hit.citations
+                state.trace.append(f"cache: {kind} 命中（相似度 {sim:.3f}）省掉一次检索+生成")
+                sp["detail"] = f"cache {kind} {sim:.3f}"
+                sp["out"] = state.answer
+                return state
+
+            if self.retriever is None:
+                state.answer = "知识库未初始化。"
+                sp["detail"] = "no retriever"
+                return state
+
+            results: list[Retrieved] = self.retriever.search(state.query, top_k=5)
+            if self.retriever.should_reject(results):
+                state.rejected = True
+                state.answer = "知识库中没有相关信息，建议咨询对应部门或补充文档后重试。"
+                state.trace.append("retrieval: 低分拒答")
+                sp["detail"] = "reject"
+                sp["out"] = state.answer
+                return state
+
+            state.retrieved = [
+                {"text": r.chunk.text, "source": r.chunk.source, "score": round(r.score, 3)} for r in results
+            ]
+            state.citations = sorted({r.chunk.source for r in results})
+            state.trace.append(f"retrieval: 召回 {len(results)} 段")
+
+            # 2) 上下文预算：历史压缩 + 片段按分数截断，避免多轮后 token 线性膨胀
+            snippets = [(f"来源:{r.chunk.source}｜{r.chunk.heading}\n{r.chunk.text}", r.score) for r in results]
+            hist_text, snip_text, stats = self.budget.apply(state.history, snippets)
+            state.context_saved_pct = stats.saved_pct
+            if stats.saved_pct > 0:
+                state.trace.append(
+                    f"context: {stats.tokens_before}→{stats.tokens_after} token"
+                    f"（省 {stats.saved_pct}%，历史 {stats.history_in}→{stats.history_kept} 条）"
+                )
+
+            prompt_parts = []
+            if hist_text:
+                prompt_parts.append(f"【对话历史】\n{hist_text}")
+            prompt_parts.append(f"【知识库片段】\n{snip_text}")
+            prompt_parts.append(f"【用户问题】\n{state.query}")
+            prompt = "\n\n".join(prompt_parts)
+
+            if self.llm is None:
+                state.answer = self._offline_answer(results)
+            else:
+                try:
+                    state.answer = self.llm.chat(ANSWER_SYSTEM, prompt, temperature=0.2)
+                except Exception as exc:
+                    logger.error("生成失败：{}", exc)
+                    state.answer = self._offline_answer(results)
+
+            sp["detail"] = f"{len(results)} 段 / 省 {stats.saved_pct}% token"
+            sp["out"] = state.answer
             return state
-
-        results: list[Retrieved] = self.retriever.search(state.query, top_k=5)
-        if self.retriever.should_reject(results):
-            state.rejected = True
-            state.answer = "知识库中没有相关信息，建议咨询对应部门或补充文档后重试。"
-            state.trace.append("retrieval: 低分拒答")
-            return state
-
-        state.retrieved = [
-            {"text": r.chunk.text, "source": r.chunk.source, "score": round(r.score, 3)} for r in results
-        ]
-        state.citations = sorted({r.chunk.source for r in results})
-        state.trace.append(f"retrieval: 召回 {len(results)} 段")
-
-        context = "\n\n".join(
-            f"[{i + 1}] 来源:{r.chunk.source}｜{r.chunk.heading}\n{r.chunk.text}"
-            for i, r in enumerate(results)
-        )
-        prompt = f"【知识库片段】\n{context}\n\n【用户问题】\n{state.query}"
-
-        if self.llm is None:
-            state.answer = self._offline_answer(results)
-            return state
-        try:
-            state.answer = self.llm.chat(ANSWER_SYSTEM, prompt, temperature=0.2)
-        except Exception as exc:
-            logger.error("生成失败：{}", exc)
-            state.answer = self._offline_answer(results)
-        return state
 
     def node_tool(self, state: AgentState) -> AgentState:
         """工具 Agent：按 query 里的实体挑工具调用。
@@ -201,14 +247,20 @@ class AgentPlatform:
         return state
 
     def node_save(self, state: AgentState) -> AgentState:
-        if self.memory is not None:
-            try:
-                self.memory.append(state.session_id, state.query, state.answer)
-                state.trace.append("memory: 已写入")
-            except Exception as exc:
-                logger.warning("记忆写入失败：{}", exc)
-        elapsed = time.perf_counter() - state.started_at
-        state.trace.append(f"done: {elapsed:.2f}s")
+        with self.recorder.span(state.trace_id, "save", state.query) as sp:
+            if self.memory is not None:
+                try:
+                    self.memory.append(state.session_id, state.query, state.answer)
+                    state.trace.append("memory: 已写入")
+                except Exception as exc:
+                    logger.warning("记忆写入失败：{}", exc)
+            # 只缓存真正答出来的结果；拒答不缓存，否则知识库补文档后仍会命中"没查到"
+            if state.answer and not state.rejected and state.cache_hit == "miss":
+                self.cache.put(state.query, state.answer, state.citations)
+                state.trace.append("cache: 已写入")
+            elapsed = time.perf_counter() - state.started_at
+            state.trace.append(f"done: {elapsed:.2f}s")
+            sp["detail"] = f"{elapsed * 1000:.0f}ms"
         return state
 
     # ---------------- 条件边 ---------------- #

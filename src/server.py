@@ -71,7 +71,32 @@ async def chat(req: ChatRequest) -> dict:
         "citations": state.citations,
         "rejected": state.rejected,
         "trace": state.trace,
+        # 可观测字段：一次请求的 trace_id 能把日志、耗时、缓存命中串起来
+        "trace_id": state.trace_id,
+        "cache_hit": state.cache_hit,
+        "context_saved_pct": state.context_saved_pct,
     }
+
+
+@app.get("/metrics")
+async def metrics() -> dict:
+    """节点耗时分布 + 缓存命中率 + 上下文压缩比。
+
+    这三个数就是"线上慢了往哪查"的入口：先看哪个节点 p95 高，
+    再看缓存命中率是否掉（掉说明流量变了或阈值设错了）。
+    """
+    platform = get_platform()
+    return {
+        "trace": platform.recorder.summary(),
+        "cache": platform.cache.stats.to_dict(),
+        "context": platform.budget.last_stats.to_dict(),
+    }
+
+
+@app.post("/cache/clear")
+async def cache_clear() -> dict:
+    get_platform().cache.clear()
+    return {"ok": True}
 
 
 @app.post("/chat/stream")
