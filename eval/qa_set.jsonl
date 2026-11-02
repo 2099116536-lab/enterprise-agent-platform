@@ -1,0 +1,60 @@
+{"question": "一线城市住宿报销标准是多少？", "keywords": ["600"], "source": "expense.md", "intent": "retrieval"}
+{"question": "去北京出差住酒店一晚能报多少？", "keywords": ["600", "一线"], "source": "expense.md", "intent": "retrieval"}
+{"question": "二线城市住宿费上限多少？", "keywords": ["400"], "source": "expense.md", "intent": "retrieval"}
+{"question": "三线城市出差住宿能报多少钱？", "keywords": ["300", "其他城市"], "source": "expense.md", "intent": "retrieval"}
+{"question": "住宿超标了怎么办？", "keywords": ["审批", "部门负责人"], "source": "expense.md", "intent": "retrieval"}
+{"question": "住宿费超出标准的部分谁来批？", "keywords": ["部门负责人", "审批"], "source": "expense.md", "intent": "retrieval"}
+{"question": "出差坐高铁有什么标准？", "keywords": ["二等座"], "source": "expense.md", "intent": "retrieval"}
+{"question": "可以坐飞机头等舱吗？", "keywords": ["经济舱"], "source": "expense.md", "intent": "retrieval"}
+{"question": "飞机票报销是什么舱位？", "keywords": ["经济舱"], "source": "expense.md", "intent": "retrieval"}
+{"question": "连续坐车超过6小时能报卧铺吗？", "keywords": ["6 小时", "卧铺"], "source": "expense.md", "intent": "retrieval"}
+{"question": "坐火车超过六个小时可以报销卧铺吗？", "keywords": ["卧铺", "6 小时"], "source": "expense.md", "intent": "retrieval"}
+{"question": "出差回来多久内要交报销？", "keywords": ["30 个工作日"], "source": "expense.md", "intent": "retrieval"}
+{"question": "报销单最晚什么时候提交？", "keywords": ["30 个工作日"], "source": "expense.md", "intent": "retrieval"}
+{"question": "去年的发票今年还能报销吗？", "keywords": ["跨年度", "不予报销"], "source": "expense.md", "intent": "retrieval"}
+{"question": "跨年的差旅费可以报吗？", "keywords": ["跨年度", "不予"], "source": "expense.md", "intent": "retrieval"}
+{"question": "一线城市和二线城市的住宿标准差多少？", "keywords": ["600", "400"], "source": "expense.md", "intent": "retrieval"}
+{"question": "差旅住宿标准是按城市分级吗？", "keywords": ["一线", "二线", "其他城市"], "source": "expense.md", "intent": "retrieval"}
+{"question": "住宿费每天最多报多少？", "keywords": ["600", "400", "300"], "source": "expense.md", "intent": "retrieval"}
+{"question": "出差交通费有什么限制？", "keywords": ["二等座", "经济舱"], "source": "expense.md", "intent": "retrieval"}
+{"question": "报销流程对时限有什么要求？", "keywords": ["30 个工作日"], "source": "expense.md", "intent": "retrieval"}
+{"question": "超标的住宿费公司给报吗？", "keywords": ["审批", "超标"], "source": "expense.md", "intent": "retrieval"}
+{"question": "出差住宿标准具体怎么划分城市？", "keywords": ["一线", "二线"], "source": "expense.md", "intent": "retrieval"}
+{"question": "飞机经济舱可以报销吗？", "keywords": ["经济舱"], "source": "expense.md", "intent": "retrieval"}
+{"question": "出差费用多久之内必须报完？", "keywords": ["30 个工作日"], "source": "expense.md", "intent": "retrieval"}
+{"question": "年假有几天？", "keywords": ["5 天"], "source": "leave.md", "intent": "retrieval"}
+{"question": "入职满一年有多少天年假？", "keywords": ["5 天"], "source": "leave.md", "intent": "retrieval"}
+{"question": "年假会随工龄增加吗？", "keywords": ["每满 1 年增加 1 天"], "source": "leave.md", "intent": "retrieval"}
+{"question": "年假最多能有多少天？", "keywords": ["15 天", "上限"], "source": "leave.md", "intent": "retrieval"}
+{"question": "年假上限是多少？", "keywords": ["15 天"], "source": "leave.md", "intent": "retrieval"}
+{"question": "请病假需要什么证明？", "keywords": ["二级及以上医院证明"], "source": "leave.md", "intent": "retrieval"}
+{"question": "病假需要提供医院证明吗？", "keywords": ["医院证明"], "source": "leave.md", "intent": "retrieval"}
+{"question": "一年病假最多能请多少天？", "keywords": ["30 天"], "source": "leave.md", "intent": "retrieval"}
+{"question": "病假全年累计不能超过多少？", "keywords": ["30 天"], "source": "leave.md", "intent": "retrieval"}
+{"question": "请假要走什么流程？", "keywords": ["OA 系统"], "source": "leave.md", "intent": "retrieval"}
+{"question": "请假在哪里提交申请？", "keywords": ["OA"], "source": "leave.md", "intent": "retrieval"}
+{"question": "请假一天谁审批？", "keywords": ["直属主管"], "source": "leave.md", "intent": "retrieval"}
+{"question": "请假三天以上需要谁批？", "keywords": ["部门负责人"], "source": "leave.md", "intent": "retrieval"}
+{"question": "请长假需要什么级别的领导审批？", "keywords": ["部门负责人"], "source": "leave.md", "intent": "retrieval"}
+{"question": "年假天数是怎么累加的？", "keywords": ["每满 1 年", "增加"], "source": "leave.md", "intent": "retrieval"}
+{"question": "入职半年有年假吗？", "keywords": ["满 1 年", "5 天"], "source": "leave.md", "intent": "retrieval"}
+{"question": "病假超过30天怎么办？", "keywords": ["30 天", "累计"], "source": "leave.md", "intent": "retrieval"}
+{"question": "请假审批要多久？", "keywords": ["1 天", "审批"], "source": "leave.md", "intent": "retrieval"}
+{"question": "年假和工龄挂钩吗？", "keywords": ["每满 1 年"], "source": "leave.md", "intent": "retrieval"}
+{"question": "请病假对医院等级有要求吗？", "keywords": ["二级"], "source": "leave.md", "intent": "retrieval"}
+{"question": "你好", "keywords": [], "source": "", "intent": "chat"}
+{"question": "在吗", "keywords": [], "source": "", "intent": "chat"}
+{"question": "谢谢", "keywords": [], "source": "", "intent": "chat"}
+{"question": "你是谁", "keywords": [], "source": "", "intent": "chat"}
+{"question": "你能做什么", "keywords": [], "source": "", "intent": "chat"}
+{"question": "早上好", "keywords": [], "source": "", "intent": "chat"}
+{"question": "再见", "keywords": [], "source": "", "intent": "chat"}
+{"question": "辛苦了", "keywords": [], "source": "", "intent": "chat"}
+{"question": "帮我查一下订单 20240518 的物流", "keywords": ["订单"], "source": "", "intent": "tool"}
+{"question": "订单 20240518 到哪了", "keywords": ["订单"], "source": "", "intent": "tool"}
+{"question": "查一下 SKU A1024 的库存", "keywords": ["库存"], "source": "", "intent": "tool"}
+{"question": "A1024 还有货吗", "keywords": ["库存"], "source": "", "intent": "tool"}
+{"question": "工单 T2024001 处理到哪一步了", "keywords": ["工单"], "source": "", "intent": "tool"}
+{"question": "帮我看看工单 T2024001 的状态", "keywords": ["工单"], "source": "", "intent": "tool"}
+{"question": "订单 20240601 发货了吗", "keywords": ["订单"], "source": "", "intent": "tool"}
+{"question": "查库存 SKU B2048", "keywords": ["库存"], "source": "", "intent": "tool"}

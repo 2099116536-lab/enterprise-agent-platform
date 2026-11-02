@@ -91,6 +91,40 @@ def split_markdown(text: str, size: int = 200, overlap: int = 20) -> list[tuple[
     return result
 
 
+def split_fine(text: str, size: int = 120, min_len: int = 10) -> list[tuple[str, str]]:
+    """在标题切分的基础上再做「句子级」细分。
+
+    标题切分的粒度太粗：一个「住宿标准」块里同时含一线/二线/其他城市三条规则，
+    塞进同一个 chunk 后向量被平均掉，问「二线上限多少」时反而召回不准。
+    这里把每个标题块按句子拆开，一条规则一个 chunk —— 粒度细了，召回才准。
+
+    超过 size 的长句再按字符硬切，保证不撑爆 embedding 上限。
+    """
+    out: list[tuple[str, str]] = []
+    for heading, body in split_markdown(text):
+        # 先按换行拆，再按中文句末标点拆，保留标点
+        pieces: list[str] = []
+        for line in body.splitlines():
+            line = line.strip().lstrip("-*·").strip()
+            if not line:
+                continue
+            for sent in re.split(r"(?<=[。；！？])", line):
+                sent = sent.strip()
+                if sent:
+                    pieces.append(sent)
+        for p in pieces:
+            if len(p) < min_len:
+                continue
+            if len(p) <= size:
+                out.append((heading, p))
+            else:
+                for start in range(0, len(p), size):
+                    seg = p[start : start + size].strip()
+                    if len(seg) >= min_len:
+                        out.append((heading, seg))
+    return out
+
+
 def ingest(docs_dir: str, persist_dir: str | None = None) -> tuple[list[Chunk], IngestStats]:
     """把目录下的 md/txt 文档切成 Chunk。"""
     stats = IngestStats()
@@ -102,8 +136,8 @@ def ingest(docs_dir: str, persist_dir: str | None = None) -> tuple[list[Chunk], 
         stats.files += 1
         text = path.read_text(encoding="utf-8", errors="ignore")
         file_chunks = 0
-        for idx, (heading, body) in enumerate(split_markdown(text)):
-            if len(body) < 30:
+        for idx, (heading, body) in enumerate(split_fine(text)):
+            if len(body) < 10:
                 stats.dropped += 1
                 continue
             chunks.append(
